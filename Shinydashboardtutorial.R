@@ -46,7 +46,8 @@ sidebar <- dashboardSidebar(
   )
 )
 body <- dashboardBody(
-  tabItem( tabName = "Datos")
+  tabItem( tabName = "Datos"),
+  tabItem(tabName = "inputs")
 )
 
 
