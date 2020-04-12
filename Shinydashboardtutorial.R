@@ -38,7 +38,11 @@ sidebar <- dashboardSidebar(
       
     ),
     menuItem( "Dashboard",
-              tabName = "dashboard")
+              tabName = "dashboard"),
+    menuItem("Inputs",
+             tabName = "inputs"
+      
+    )
   )
 )
 body <- dashboardBody(
