@@ -2,6 +2,7 @@ install.packages("shiny")
 install.packages("shinydashboard")
 library(shiny)
 library(shinydashboard)
+library(dplyr)
 header <- dashboardHeader(
   dropdownMenu(
     type = "message",
@@ -43,11 +44,31 @@ sidebar <- dashboardSidebar(
              tabName = "inputs"
       
     )
+  ),
+  sliderInput(
+    inputId = "height",
+    label = "Height",
+    min=66,
+    max=264,
+    value = 264
+  ),
+  selectInput(
+    inputId = "name",
+    label = "Name",
+    choices = starwars$name
   )
 )
 body <- dashboardBody(
-  tabItem( tabName = "Datos"),
-  tabItem(tabName = "inputs")
+  tabItems(
+    tabItem(tabName = "dashboard",
+            tabBox(
+              title = "International Space Station Fun Facts",
+              tabPanel("Fun fact1"),
+              tabPanel("Fun fact2")
+            )),
+    tabItem(tabName = "inputs")
+  ),
+  textOutput("name")
 )
 
 
@@ -56,7 +77,10 @@ ui <- dashboardPage(header,sidebar,body)
 
 
 server <- function(input, output, session) {
-  
+  starwars <- dplyr::starwars
+  output$name <- renderText({
+    input$name
+  })
 }
 
 shinyApp(ui, server)
