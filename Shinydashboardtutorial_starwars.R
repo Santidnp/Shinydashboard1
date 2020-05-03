@@ -19,7 +19,7 @@ server <- function(input, output, session) {
     session = session,
     filePath = "starwars.csv",
     readFunc = function(filePath){
-      read.csv(paste0("C:/Users/sngh9/OneDrive/Escritorio/ejercicios R/Shiny/",filePath))
+        read.csv(filePath,sep = ";")
     }
   )
   output$table(
@@ -30,4 +30,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-1 
+
+

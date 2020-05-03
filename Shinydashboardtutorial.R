@@ -56,7 +56,8 @@ sidebar <- dashboardSidebar(
     inputId = "name",
     label = "Name",
     choices = starwars$name
-  )
+  ),
+  actionButton("click","Update click box")
 )
 body <- dashboardBody(
   tabItems(
@@ -68,17 +69,23 @@ body <- dashboardBody(
             )),
     tabItem(tabName = "inputs")
   ),
-  textOutput("name")
+  textOutput("name"),
+  valueBoxOutput("click_box")
 )
 
 
-ui <- dashboardPage(header,sidebar,body)
+ui <- dashboardPage(skin = "purple",header,sidebar,body)
 
 
 
 server <- function(input, output, session) {
   starwars <- dplyr::starwars
- 
+  output$click_box <- renderValueBox({
+    valueBox(
+      input$click, 
+      "Click Box"
+    )
+  })
   
 }
 
