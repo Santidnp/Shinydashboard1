@@ -78,17 +78,8 @@ ui <- dashboardPage(header,sidebar,body)
 
 server <- function(input, output, session) {
   starwars <- dplyr::starwars
-  output$name <- renderText({
-    input$name
-  })
-  reactive_starwars_data <- reactiveFileReader(
-    intervalMillis = 1000,
-    session = session,
-    filePath = "starwars.cvs",
-    readFunc = function(filePath){
-      read.csv(url(filePath))
-    }
-  )
+ 
+  
 }
 
 shinyApp(ui, server)
