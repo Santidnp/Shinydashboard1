@@ -27,7 +27,8 @@ header <- dashboardHeader(
   dropdownMenu(
     type = "notifications",
     notificationItem(
-      text = "Debo acostarme mas temprano"
+      text = "Debo acostarme mas temprano",
+      icon = icon("rocket")
     )
   )
   
