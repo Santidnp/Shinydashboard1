@@ -1,0 +1,343 @@
+---
+title: "scrollbar"
+author: "yo"
+date: "5/4/2020"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    #storyboard: true
+runtime: shiny
+---
+
+```{r}
+
+  global <- "C:/Users/crocha/Departamento Nacional de Planeacion/Unidad de Cientificos de Datos - Repositorio UCD/Proyectos UCD/2020/05_Tablero_PQRS"       # Cambiar directorio global
+# global <- "C:/Users/sagarcia/Departamento Nacional de Planeacion/Unidad de Cientificos de Datos - Repositorio UCD/Proyectos UCD/2020/05_Tablero_PQRS" 
+global <- "C:/Users/sngh9/Departamento Nacional de Planeacion/Unidad de Cientificos de Datos - Repositorio UCD/Proyectos UCD/2020/05_Tablero_PQRS"
+Insumos_gen <- "/1_Insumos/Bases_de_datos"
+Insumos_otr <- "/1_Insumos/Otros_insumos"
+Source <- "/2_Codigo/1_Source"
+appdir <- "/2_Codigo/2_Aplicacion_final"
+carp_datos <- "/datos"
+
+
+### Librerias
+
+library("data.table")
+library("dplyr")
+library("readxl")
+library("knitr")
+library("kableExtra")
+library("xts")
+library("rgdal")
+library("treemap")
+library("tmap")
+
+
+
+# Abrir bases de datos de Consolidado de PQRS
+  
+  datos <- read_xlsx(paste0(global, appdir, carp_datos, "/reporte.xlsx")) %>% data.table()
+  
+  
+# Crear tabla 1
+  
+  pl1_data <- datos %>% count(Tipo_de_Documento) %>% data.table()
+  pl1_data[, p := (pl1_data[, 2] / colSums(pl1_data[, 2])) * 100]
+  
+
+# Crear tabla 2
+  
+  pl2_data <- datos %>% count(Medio_de_Recepcion) %>% data.table()
+  pl2_data[, p := (pl2_data[, 2] / colSums(pl2_data[, 2])) * 100]
+  tab_2 <- datos[, c("Medio_de_Recepcion", "Tipo_de_Documento", "Dias_respuesta")]
+  tab_2[, Dias_respuesta := as.numeric(Dias_respuesta)]
+  colnames(tab_2) <- c("Medio de recepcion", "Tipo de documento", "Dias de respuesta")
+  
+# Crear semaforo
+  
+
+  vencidas <- subset(datos,!is.na(Vencidas)) %>% data.table()
+  
+  vencidas_est <- vencidas[, c("Dep_Respuesta", "Pqr_Verbal", "Tipo_de_Documento")] %>% count(Tipo_de_Documento) %>% data.table()
+  vencidas_est[, p := (vencidas_est[, 2] / colSums(vencidas_est[, 2])) * 100]
+  
+  termino <- subset(datos,!is.na(`En Término`)) %>% data.table()
+  termino[, dias_gracia := as.numeric(as.Date(fecha_vence) - as.Date(Fecha_Radicado))]
+  
+  
+  dias_7 <- termino[dias_gracia < 7, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento", "dias_gracia")]
+  dias_7_est <- dias_7[, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento")] %>% count(Tipo_de_Documento) %>% data.table()
+  dias_7_est[, p := (dias_7_est[, 2] / colSums(dias_7_est[, 2])) * 100]
+  
+  
+  dias_15 <- termino[dias_gracia >= 7 & dias_gracia < 15, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento", "dias_gracia")]
+  dias_15_est <- dias_15[, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento")] %>% count(Tipo_de_Documento) %>% data.table()
+  dias_15_est[, p := (dias_15_est[, 2] / colSums(dias_15_est[, 2])) * 100]
+  
+  dias_mas <- termino[dias_gracia >= 15, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento", "dias_gracia")]
+  dias_mas_est <- dias_mas[, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento")] %>% count(Tipo_de_Documento) %>% data.table()
+  dias_mas_est[, p := (dias_mas_est[, 2] / colSums(dias_mas_est[, 2])) * 100]
+  
+  d_7 <- dim(dias_7)[1]
+  d_15 <- dim(dias_15)[1]
+  d_mas <- dim(dias_mas)[1]
+
+### Se crea una lista con las dependencias de asociadas a los temas de interes (Sisben,Regalias,Regional,Inversiones)
+  
+  listdep <- list("SUBDIRECCION DE PROMOCION SOCIAL Y CALIDAD DE VIDA","DIRECCION DEL SISTEMA GENERAL DE REGALIAS","DIRECCION DE DESCENTRALIZACION Y DESARROLLO REGIONAL","DIRECCION DE INVERSIONES Y FINANZAS PUBLICAS")
+  Tab <- datos[Dep_Respuesta %in% listdep,] #Se filtran los datos con esas dependencias
+  
+# Se usa la función contar para saber cuantas PQRS son asignadas a cada uno de los temas de interes
+
+  tab3 <- Tab %>% count(Dep_Respuesta) %>% data.table() 
+  tab3[Dep_Respuesta=='SUBDIRECCION DE PROMOCION SOCIAL Y CALIDAD DE VIDA',1:="Sisben"]
+  tab3[Dep_Respuesta=='DIRECCION DEL SISTEMA GENERAL DE REGALIAS',1:="Regalias"]
+  tab3[Dep_Respuesta=='DIRECCION DE DESCENTRALIZACION Y DESARROLLO REGIONAL',1:="Regional"]
+  tab3[Dep_Respuesta=='DIRECCION DE INVERSIONES Y FINANZAS PUBLICAS',1:="Inversiones"]
+  names(tab3)=c("Tema","cantidad") 
+  tab3 <- tab3 %>% arrange(desc(cantidad)) 
+
+########################################################################################
+  
+# A partir de aca se hace el mismo analisís pero a traves de medio de recepción
+# y se organizan los datos de mayor a menor para el momento de hacer las gráficas
+  
+  pres<- datos[Medio_de_Recepcion=='Presencial',]
+  presencial <- pres[Dep_Respuesta %in% listdep,]
+  tabp <- presencial %>% count(Dep_Respuesta) %>% data.table()
+  tabp[Dep_Respuesta=='SUBDIRECCION DE PROMOCION SOCIAL Y CALIDAD DE VIDA',1:="Sisben"]
+  tabp[Dep_Respuesta=='DIRECCION DEL SISTEMA GENERAL DE REGALIAS',1:="Regalias"]
+  tabp[Dep_Respuesta=='DIRECCION DE DESCENTRALIZACION Y DESARROLLO REGIONAL',1:="Regional"]
+  tabp[Dep_Respuesta=='DIRECCION DE INVERSIONES Y FINANZAS PUBLICAS',1:="Inversiones"]
+  names(tabp)=c("Tema","cantidad")
+  tabp <- tabp %>% arrange(desc(cantidad))
+  tabp$Tema <- factor(tabp$Tema, levels = unique(tabp$Tema)[order(tabp$cantidad, decreasing = TRUE)])
+
+#########################################################################################
+
+  tel<- datos[Medio_de_Recepcion=='Telefonico',]
+  telefono <- tel[Dep_Respuesta %in% listdep,]
+  tabt <- telefono %>% count(Dep_Respuesta) %>% data.table()
+  tabt[Dep_Respuesta=='SUBDIRECCION DE PROMOCION SOCIAL Y CALIDAD DE VIDA',1:="Sisben"]
+  tabt[Dep_Respuesta=='DIRECCION DEL SISTEMA GENERAL DE REGALIAS',1:="Regalias"]
+  tabt[Dep_Respuesta=='DIRECCION DE DESCENTRALIZACION Y DESARROLLO REGIONAL',1:="Regional"]
+  tabt[Dep_Respuesta=='DIRECCION DE INVERSIONES Y FINANZAS PUBLICAS',1:="Inversiones"]
+  names(tabt)=c("Tema","cantidad")
+  tabt$Tema <- factor(tabt$Tema, levels = unique(tabt$Tema)[order(tabt$cantidad, decreasing = TRUE)])
+#########################################################################################
+  
+  datos1 <- datos[,c("Tipo_de_Documento","Dias_respuesta")]#se filtra por tipo de documento
+  conteo <- datos1 %>% count(datos1$Tipo_de_Documento) %>% data.table()# Se cuenta por documento 
+  datos1[, Dias_respuesta := as.numeric(Dias_respuesta)]# Se pasa a númerico dias de respuesta
+  
+  
+#Se crea una función que permita categorizar las PQRS según el tiempo de respuesta y tipo de documento
+  etiquetar <- function(dato) {
+    if(dato <= 5){
+      return("entre 0 y 5")
+    }
+    else if (dato <= 10 & dato > 5){
+      return("entre 6 y 10") 
+    }
+    else if(dato <= 15 & dato >= 11){
+      return("entre 11 y 15")
+    }  
+    else {
+      return("entre 16 y 30")
+    }
+  }
+  
+  datos1$etiqueta <- sapply(datos1$Dias_respuesta,etiquetar) %>% data.table() 
+  orden <- c("entre 0 y 5","entre 6 y 10","entre 11 y 15","entre 16 y 30")
+  datos1$etiqueta <- factor(datos1$etiqueta,
+                            levels = orden,
+                            labels = orden
+                            
+  )
+  
+##############################################################################################
+  
+  # Se crea una tabla para caracterizar por población la información de las PQRS
+  # Se debe tener en cuenta que se eliminaron los grupos en que la clasificación estaba pendiente 
+  # y a aquellos que estaban en ninguna de las anterioes
+  
+  
+  
+  
+  contpobla<- datos %>% count(Inf_Poblacional) %>% data.table()
+  names(contpobla) <- c("Población","total")
+  contpoblreal <- contpobla[-c(3,4,8)]
+##############################################################################################
+  
+  # Para generar la serie de tiempo se generó una columna que indica a que mes pertence cada de pqrs
+  # con esto se hizo un analisís de la evolución del tipo de documento para el año 2019
+  # Se tiene que tener en cuenta que la variable mesesn fue hecha para que la función xts lo tomé como su
+  # variable de tiempo y permita graficar,para que lo tome como la fecha, ya que no lee la fecha que se generó
+  # con el comando substr
+  
+  
+  
+  datos[, anio_mes := substr(datos$Fecha_Radicado, 1, 7)] 
+  datoss <- datos %>% count(anio_mes,Tipo_de_Documento) %>% data.table()  
+  datos_serie <- reshape(datoss, idvar = "anio_mes", timevar = "Tipo_de_Documento", direction = "wide")
+  mesesn <- seq(1,12)
+  
+  don=xts(x=datos_serie, order.by=as.Date(mesesn))
+###############################################################################################
+
+############################################################################################
+  # En este fragmento se analiza el las PQRS a termino vencidadas extemporeanas y vencidas , Ya que se solo tenian
+  # extemporeanas se simulo información oara vencidas y a termino , para PQRS con respuesta se simulo que fueran todas las
+  # que no esten vencidas
+  
+  list2 <- list("Extemporáneas","Vencidas","En Término","Respuesta")
+  estadoEX <- datos[Extemporáneas=='X',]
+  ext_countEX<- estadoEX %>% count(Extemporáneas) %>% data.table()
+  estadoVEN <-datos[Vencidas=='X',]
+  ext_countVEN<- estadoVEN %>% count(Vencidas) %>% data.table()
+  estadoTE <- datos[`En Término`=='X',]
+  ext_countTE<- estadoTE %>% count(`En Término`) %>% data.table()
+  datos2 <- data.table(list2,c(ext_countEX[1,2],ext_countVEN[1,2],ext_countTE[1,2],nrow(datos)-ext_countVEN[1,2]))
+  names(datos2) <- c("Estado","Cantidad")
+  
+  
+  
+##################################################################################################################
+#Mapa************************************************************************************************************  
+  datos[, Dias_respuesta := as.numeric(Dias_respuesta)]
+  map <- readOGR(paste0(global, appdir, carp_datos, "/mapas", "/depto.shp"), encoding = "UTF-8")
+  
+  llaves_mapa <- read_xlsx(paste0(global,appdir, carp_datos, "/Llaves.xlsx")) %>% data.table()
+  
+  depto_dias <- aggregate(x=datos$Dias_respuesta,
+                          by=list(datos$Departamento),
+                          FUN=mean,na.rm=TRUE) %>% data.table()
+  
+  colnames(depto_dias)<-c("Departamentos","Promedio de dias de respuesta") 
+  colnames(llaves_mapa)[c(2,3)]<-c("Departamento","Departamentos")
+  depto_pqrs<- datos %>% count(datos$Departamento) %>% data.table()
+  colnames(depto_pqrs)[c(1,2)]<-c("Departamentos","Número de PQRS")
+  
+  merge1 <- depto_dias[llaves_mapa,on = "Departamentos"]
+  merge2 <- depto_pqrs[llaves_mapa,on="Departamentos"]
+  colnames(merge1)[c(1,4)]<-c("Departamentos","Departamento")
+  colnames(map@data)[2]=("Departamento")
+  map@data <-as.data.table(map@data)
+  
+  
+  map@data<-map@data[merge1, on="Departamento"]
+  map@data<-map@data[merge2,on="Departamento"]
+  
+  
+  map@data <- map@data[,-c('PERIMETER', 'HECTARES', 'Departamentos', 'i.DPTO', 'i.Departamentos', 'i.DPTO.1', 'AREA')]
+  bogota <-  map@data[Departamento == 'SANTAFE DE BOGOTA D.C', 3:4 ]
+  map@data[Departamento == 'SANTAFE DE BOGOTA D.C', 3:4 := NA]
+  
+  map@data$DPTO <- map@data$Departamento  
+  
+  
+###################################################################################
+  
+  datos[, dias_restantes := -as.numeric(as.Date(as.matrix(datos[, "fecha_vence"])) - rep(Sys.Date(), nrow(datos)))]
+  datos[, labels_dias_restantes := cut(datos$dias_restantes, c(0,30,90, max(datos$dias_restantes, na.rm = TRUE)))]
+  semaforo_data <- datos %>% count(labels_dias_restantes) %>% data.table()
+  semaforo_data[, p := (semaforo_data[, 2] / colSums(semaforo_data[, 2])) * 100]
+ 
+  ################################################################################ 
+  
+  tab_4 <- datos[,c("Medio_de_Recepcion","Tipo_de_Documento","Dias_respuesta")]
+  colnames(tab_4) <- c("Medio de recepcion", "Tipo de documento", "Dias de respuesta")
+  tab_4 <- apply_labels(tab_4,
+                        `Medio de recepcion`="Medio de recepcion",
+                        `Tipo de documento`="Tipo de documento"
+                        )
+  
+  
+  ####################################################################################
+  contpoblreal <- na.omit(contpoblreal)
+  
+  ######################TRASLADOS####################################################
+  
+  tipo_res <- datos %>% count(Tipo_Respuesta) %>% na.omit() %>% data.table()
+  traslado <- tipo_res[Tipo_Respuesta == 'TRASLADO', 2]
+  
+  
+  Dnp <- tipo_res[Tipo_Respuesta== 'TRASLADO',2:=NA] %>% na.omit() %>% data.table()
+  
+  dnp <- sapply(Dnp[,2], sum, na.rm = TRUE) %>%  data.table()
+  colnames(dnp)<-c("n")
+  
+  
+  dnp_tr <- rbind(dnp,traslado) %>% data.table()
+  
+  dnp_tr <- cbind(c("DNP","TRASLADO"),dnp_tr)
+  
+  colnames(dnp_tr) <- c("Tipo","total")
+  
+  
+  traslados_ex <- datos[`Traslados Extemporáneos`=='X'] %>% data.table()
+  
+  traslados_ex1 <- datos %>% count(`Traslados Extemporáneos`=='X') %>% na.omit() %>% data.table()
+  
+  
+  colnames(traslados_ex1) <- c("traslados extemporáneros","total")
+  
+  traslados_noex <- (dnp_tr[2,2]-traslados_ex1[1,2]) %>% data.table()
+  
+  Traslados <- data.table(
+    Tipo=c("Extemporáneos","No Extempoárneos"),
+    Total=c(traslados_ex1[1,2],traslados_noex)
+  )
+  
+  Traslados$Total <- as.numeric(Traslados$Total)
+  
+  
+```
+
+
+```{css}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-y: scroll !important;
+  height: 60vh !important;
+}
+```
+
+c1 {.sidebar}
+============================================
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=200)
+```
+
+```{r }
+x <- matrix(nrow = 3, ncol = 20, data = 1)
+x
+```
+
+
+```{r  echo=FALSE, message=FALSE, warning=FALSE}
+autofit(flextable(vencidas[, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento")]                    %>% dplyr::rename("Dependencia" = "Dep_Respuesta",
+                                    "Nro Radicado" = "Nro_Radicado",
+                                    "Fecha de vencimiento" = "fecha_vence",
+                                    "Tipo" = "Tipo_de_Documento")
+                  ))
+```
+
+
+```{r}
+knitr::kable(vencidas[, c("Dep_Respuesta", "Nro_Radicado", "fecha_vence", "Tipo_de_Documento")]                    %>% dplyr::rename("Dependencia" = "Dep_Respuesta",
+                                    "Nro Radicado" = "Nro_Radicado",
+                                    "Fecha de vencimiento" = "fecha_vence",
+                                    "Tipo" = "Tipo_de_Documento")
+                  , "pandoc")
+```
+
+```{r}
+knitr::kable(head(mtcars[, 1:4]), "pandoc")
+```
+

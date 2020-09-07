@@ -2,7 +2,6 @@ install.packages("shiny")
 install.packages("shinydashboard")
 library(shiny)
 library(shinydashboard)
-library(dplyr)
 header <- dashboardHeader(
   dropdownMenu(
     type = "message",
@@ -27,11 +26,9 @@ header <- dashboardHeader(
   dropdownMenu(
     type = "notifications",
     notificationItem(
-      text = "Debo acostarme mas temprano",
-      icon = icon("rocket")
+      text = "Debo acostarme mas temprano"
     )
   )
-  
   
 )
 sidebar <- dashboardSidebar(
@@ -46,48 +43,18 @@ sidebar <- dashboardSidebar(
              tabName = "inputs"
       
     )
-  ),
-  sliderInput(
-    inputId = "height",
-    label = "Height",
-    min=66,
-    max=264,
-    value = 264
-  ),
-  selectInput(
-    inputId = "name",
-    label = "Name",
-    choices = starwars$name
-  ),
-  actionButton("click","Update click box")
+  )
 )
 body <- dashboardBody(
-  tabItems(
-    tabItem(tabName = "dashboard",
-            tabBox(
-              title = "International Space Station Fun Facts",
-              tabPanel("Fun fact1"),
-              tabPanel("Fun fact2")
-            )),
-    tabItem(tabName = "inputs")
-  ),
-  textOutput("name"),
-  valueBoxOutput("click_box")
+  tabItem( tabName = "Datos")
 )
 
 
-ui <- dashboardPage(skin = "purple",header,sidebar,body)
+ui <- dashboardPage(header,sidebar,body)
 
 
 
 server <- function(input, output, session) {
-  starwars <- dplyr::starwars
-  output$click_box <- renderValueBox({
-    valueBox(
-      input$click, 
-      "Click Box"
-    )
-  })
   
 }
 
