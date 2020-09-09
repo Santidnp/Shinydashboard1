@@ -3,7 +3,6 @@ library(shiny)
 library(tidyverse)
 library(colourpicker)
 library(plotly)
-
 ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
@@ -20,28 +19,32 @@ ui <- fluidPage(
                   value = c(1977, 2002))
     ),
     mainPanel(
-      # Make the plot 600 pixels wide and 600 pixels tall
-      plotOutput("plot", width = 600,height = 600)
+      # Replace the `plotOutput()` with the plotly version
+      plotlyOutput("plot")
     )
   )
 )
 
 # Define the server logic
 server <- function(input, output) {
-  output$plot <- renderPlot({
-    data <- subset(gapminder,
-                   continent %in% input$continents &
-                     year >= input$years[1] & year <= input$years[2])
-    
-    p <- ggplot(data, aes(gdpPercap, lifeExp)) +
-      geom_point(size = input$size, col = input$color) +
-      scale_x_log10() +
-      ggtitle(input$title)
-    
-    if (input$fit) {
-      p <- p + geom_smooth(method = "lm")
-    }
-    p
+  # Replace the `renderPlot()` with the plotly version
+  output$plot <- renderPlotly({
+    # Convert the existing ggplot2 to a plotly plot
+    ggplotly({
+      data <- subset(gapminder,
+                     continent %in% input$continents &
+                       year >= input$years[1] & year <= input$years[2])
+      
+      p <- ggplot(data, aes(gdpPercap, lifeExp)) +
+        geom_point(size = input$size, col = input$color) +
+        scale_x_log10() +
+        ggtitle(input$title)
+      
+      if (input$fit) {
+        p <- p + geom_smooth(method = "lm")
+      }
+      p
+    })
   })
 }
 
