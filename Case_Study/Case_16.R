@@ -1,6 +1,7 @@
 library(shiny)
 library(gapminder)
 library(tidyverse)
+
 ui <- fluidPage(
   h1("Gapminder"),
   sliderInput(inputId = "life", label = "Life expectancy",
@@ -8,14 +9,14 @@ ui <- fluidPage(
               value = c(30, 50)),
   selectInput("continent", "Continent",
               choices = c("All", levels(gapminder$continent))),
-  # Add a download button
-  downloadButton(outputId = "download_data", label = "Download"),
+  downloadButton("download_data"),
   plotOutput("plot"),
-  tableOutput("table")
+  # Replace the tableOutput() with DT's version
+  DT::dataTableOutput("table")
 )
 
 server <- function(input, output) {
-  output$table <- renderTable({
+  filtered_data <- reactive({
     data <- gapminder
     data <- subset(
       data,
@@ -30,42 +31,22 @@ server <- function(input, output) {
     data
   })
   
-  # Create a download handler
+  # Replace the renderTable() with DT's version
+  output$table <- DT::renderDataTable({
+    data <- filtered_data()
+    data
+  })
+  
   output$download_data <- downloadHandler(
-    # The downloaded file is named "gapminder_data.csv"
     filename = "gapminder_data.csv",
     content = function(file) {
-      # The code for filtering the data is copied from the
-      # renderTable() function
-      data <- gapminder
-      data <- subset(
-        data,
-        lifeExp >= input$life[1] & lifeExp <= input$life[2]
-      )
-      if (input$continent != "All") {
-        data <- subset(
-          data,
-          continent == input$continent
-        )
-      }
-      
-      # Write the filtered data into a CSV file
+      data <- filtered_data()
       write.csv(data, file, row.names = FALSE)
     }
   )
   
   output$plot <- renderPlot({
-    data <- gapminder
-    data <- subset(
-      data,
-      lifeExp >= input$life[1] & lifeExp <= input$life[2]
-    )
-    if (input$continent != "All") {
-      data <- subset(
-        data,
-        continent == input$continent
-      )
-    }
+    data <- filtered_data()
     ggplot(data, aes(gdpPercap, lifeExp)) +
       geom_point() +
       scale_x_log10()

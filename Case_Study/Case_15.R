@@ -8,14 +8,15 @@ ui <- fluidPage(
               value = c(30, 50)),
   selectInput("continent", "Continent",
               choices = c("All", levels(gapminder$continent))),
-  # Add a download button
   downloadButton(outputId = "download_data", label = "Download"),
   plotOutput("plot"),
   tableOutput("table")
 )
 
 server <- function(input, output) {
-  output$table <- renderTable({
+  # Create a reactive variable named "filtered_data"
+  filtered_data <- reactive({
+    # Filter the data (copied from previous exercise)
     data <- gapminder
     data <- subset(
       data,
@@ -30,42 +31,26 @@ server <- function(input, output) {
     data
   })
   
-  # Create a download handler
+  output$table <- renderTable({
+    # Use the filtered_data variable to render the table output
+    data <- filtered_data()
+    data
+  })
+  
   output$download_data <- downloadHandler(
-    # The downloaded file is named "gapminder_data.csv"
     filename = "gapminder_data.csv",
     content = function(file) {
-      # The code for filtering the data is copied from the
-      # renderTable() function
-      data <- gapminder
-      data <- subset(
-        data,
-        lifeExp >= input$life[1] & lifeExp <= input$life[2]
-      )
-      if (input$continent != "All") {
-        data <- subset(
-          data,
-          continent == input$continent
-        )
-      }
-      
-      # Write the filtered data into a CSV file
+      # Use the filtered_data variable to create the data for
+      # the downloaded file
+      data <- filtered_data()
       write.csv(data, file, row.names = FALSE)
     }
   )
   
   output$plot <- renderPlot({
-    data <- gapminder
-    data <- subset(
-      data,
-      lifeExp >= input$life[1] & lifeExp <= input$life[2]
-    )
-    if (input$continent != "All") {
-      data <- subset(
-        data,
-        continent == input$continent
-      )
-    }
+    # Use the filtered_data variable to create the data for
+    # the plot
+    data <- filtered_data()
     ggplot(data, aes(gdpPercap, lifeExp)) +
       geom_point() +
       scale_x_log10()
