@@ -1,0 +1,58 @@
+---
+title: "Bikeshare"
+output: 
+  flexdashboard::flex_dashboard:
+  orientation: columns
+---
+  
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Overview
+=====================================
+  
+Column
+-----------------------------------------------------------------------
+  
+### Chart A
+  
+```{r}
+
+```
+
+Column
+-----------------------------------------------------------------------
+  
+### Chart B
+  
+  
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+Details {data-navmenu=More}
+=====================================
+  
+### Chart AA
+  
+```{r}
+
+```
+
+Data {data-navmenu=More}
+=====================================
+  
+### Chart BB
+  
+```{r}
+
+```
+
+
