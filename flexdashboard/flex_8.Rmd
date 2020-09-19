@@ -1,0 +1,56 @@
+---
+title: "Bike Shares Daily"
+output: 
+  flexdashboard::flex_dashboard:
+  orientation: columns
+vertical_layout: fill
+---
+  
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(lubridate)
+library(ggplot2)
+library(tidyverse)
+library(plotly)
+
+trips_df <- read_csv('http://s3.amazonaws.com/assets.datacamp.com/production/course_6355/datasets/sanfran_bikeshare_joined_oneday.csv')
+```
+
+
+Overview
+===================================== 
+  
+Column {data-width=650}
+-----------------------------------------------------------------------
+  
+### Origins
+  
+```{r}
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+  
+  
+### Trips by Start Time
+  
+  
+### Trip Durations
+  
+```{r}
+
+duration_gg <- trips_df %>%
+  mutate(`Trip Duration (min)` = duration_sec / 60) %>%
+  filter(`Trip Duration (min)` <= 60) %>%
+  ggplot(aes(x = `Trip Duration (min)`)) +
+  theme_bw() +
+  geom_histogram(binwidth = 1) +
+  ylab('# Trips')
+
+ggplotly(duration_gg)
+
+```
+
+
