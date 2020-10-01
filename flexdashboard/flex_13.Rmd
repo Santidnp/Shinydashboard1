@@ -1,0 +1,49 @@
+---
+title: "Bike Shares Daily"
+output: 
+  flexdashboard::flex_dashboard:
+  orientation: columns
+vertical_layout: fill
+---
+  
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(tidyverse)
+library(lubridate)
+
+trips_df <- read_csv('http://s3.amazonaws.com/assets.datacamp.com/production/course_6355/datasets/sanfran_bikeshare_joined_oneday.csv')
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+  
+### Origins
+  
+  
+Column {data-width=350}
+-----------------------------------------------------------------------
+  
+### Median Trip Length
+  
+  
+### % Short Trips
+  
+```{r}
+
+num_trips <- nrow(trips_df)
+short_trips <- sum(trips_df$duration_sec < 600) # under 10 min
+pct_short_trips <- round(100 * short_trips / num_trips, 0)
+
+gauge(value = pct_short_trips,
+      min = 0,
+      max = 100,
+      sectors = gaugeSectors(success = c(67, 100),
+                             warning = c(33, 66),
+                             danger = c(0, 32)))
+
+```
+
+### Trips by Start Time
+
+

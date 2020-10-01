@@ -1,0 +1,61 @@
+---
+title: "Bike Shares Daily"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(knitr)
+library(DT)
+
+trips_df <- read_csv('http://s3.amazonaws.com/assets.datacamp.com/production/course_6355/datasets/sanfran_bikeshare_joined_oneday.csv')
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Station Usage
+
+```{r}
+
+station_trips_df <- trips_df %>%
+  select(start_station_name, end_station_name) %>%
+  gather(key = Type, value = Station) %>%
+  group_by(Station, Type) %>%
+  summarize(n_trips = n()) %>% 
+  mutate(Type = ifelse(Type == 'start_station_name', 'Trip Starts', 'Trip Ends')) %>%
+  spread(key = Type, value = n_trips) %>%
+  replace_na(list(`Trip Starts` = 0, `Trip Ends` = 0)) %>%
+  mutate(Gap = `Trip Ends` - `Trip Starts`)
+
+datatable(
+  station_trips_df, rownames = FALSE,
+  extensions = 'Buttons', options = list(
+    dom = 'Bfrtip',
+    buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+  )
+)
+
+
+```
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Median Trip Length
+
+
+### % Short Trips
+
+
+### Trips by Start Time
+
+

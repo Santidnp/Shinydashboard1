@@ -1,0 +1,41 @@
+---
+title: "Bike Shares Daily"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(leaflet)
+library(DT)
+library(tidyverse)
+library(lubridate)
+
+trips_df <- read_csv('https://assets.datacamp.com/production/repositories/1448/datasets/1f12031000b09ad096880bceb61f6ca2fd95e2eb/sanfran_bikeshare_joined_oneday.csv')
+
+data_date <- unique(as.Date(trips_df$start_date))
+```
+
+Column 
+-----------------------------------------------------------------------
+### Origins
+
+```{r}
+
+trips_df %>%
+  rename(latitude = start_latitude,
+         longitude = start_longitude) %>%
+  group_by(start_station_id, latitude, longitude) %>%
+  count() %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircles(radius = ~n)
+
+```
+
+> Source: Bay Area Bike Share, Date: `r data_date`
+
+

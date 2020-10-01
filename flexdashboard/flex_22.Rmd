@@ -1,0 +1,111 @@
+---
+title: "Bike Shares Daily"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r global, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(leaflet)
+library(DT)
+library(tidyverse)
+library(lubridate)
+library(plotly)
+
+options(shiny.sanitize.errors = FALSE)
+
+trips_df <- read_csv('http://s3.amazonaws.com/assets.datacamp.com/production/course_6961/datasets/sanfran_bikeshare_joined_oneday.csv') %>%
+  mutate(duration_min = duration_sec / 60)
+
+sf_bbox <- c(-123.0137, 37.6040, -122.3549, 37.8324)
+sj_bbox <- c(-122.0457, 37.1255, -121.5891, 37.4692)
+
+trips_df <- trips_df %>%
+  mutate(city = ifelse((start_latitude >= sf_bbox[2] & start_latitude <= sf_bbox[4]) &
+                         (start_longitude >= sf_bbox[1] & start_longitude <= sf_bbox[3]),
+                       'San Francisco', ifelse((start_latitude >= sj_bbox[2] & start_latitude <= sj_bbox[4]) &
+                                                 (start_longitude >= sj_bbox[1] & start_longitude <= sj_bbox[3]),
+                                               'San Jose', 'Other')))
+```
+
+Column {data-width=200 .sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+
+radioButtons("origin_location", label = "Select trip origin region to display:", 
+             choices = c('All' = 'all', 'San Francisco' = 'sf', 'San Jose' = 'sj'), 
+             selected = c('all'))
+
+trips <- reactive({
+
+  if(input$origin_location == 'sf') {
+    trips_df <- trips_df %>% filter(city == 'San Francisco')
+  } else if(input$origin_location == 'sj') {
+    trips_df <- trips_df %>% filter(city == 'San Jose')
+  }
+
+  trips_df
+
+})
+
+```
+
+Column {data-width=450}
+-----------------------------------------------------------------------
+
+### Origins
+
+```{r}
+
+renderLeaflet({
+  trips() %>%
+    rename(latitude = start_latitude,
+           longitude = start_longitude) %>%
+    group_by(start_station_id, latitude, longitude) %>%
+    count() %>%
+    leaflet() %>%
+    addTiles() %>%
+    addCircles(radius = ~n)
+})
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Total Trips
+
+```{r}
+
+renderValueBox({
+  valueBox(prettyNum(trips() %>%
+                       nrow(), big.mark = ','), 
+           icon = 'fa-bicycle')
+})
+
+
+# valueBox(prettyNum(nrow(trips_df), big.mark = ','), icon = 'fa-bicycle')
+```
+
+### Trips by Start Time
+
+```{r}
+
+renderPlot({trips() %>%
+    mutate(hour = hour(start_date)) %>%
+    group_by(hour) %>%
+    summarize(`Trips Started` = n()) %>%
+    ggplot(aes(x = hour, y = `Trips Started`)) +
+    theme_bw() +
+    ylab('Trips Started \n') +
+    geom_bar(stat = 'identity') 
+})
+
+
+```
+
+

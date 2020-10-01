@@ -5,12 +5,12 @@ output:
   orientation: columns
 ---
   
-  ```{r setup, include=FALSE}
+```{r setup, include=FALSE}
 library(flexdashboard)
 ```
 Overview
 =================
-  Column
+Column
 -----------------------------------------------------------------------
   
 ### Chart A
